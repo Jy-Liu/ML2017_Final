@@ -1,50 +1,52 @@
 import pickle
-import argparse
 import numpy as np
-from utils import DataReader
-from pandas import DataFrame
+from utils import DataWriter
 from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_absolute_error
+
 
 class Regressor:
     def __init__(self):
-        print('kerker')
+        self.boosters = {}
 
     def train(self, X_raw, Y_raw):
-        cities = np.unique(X_raw[:, 0])
-        self.city2id = {city_name: idx for idx, city_name in enumerate(cities)}
-        X_raw[:, 0] = [self.city2id[city_name] for city_name in X_raw[:, 0]]
-        print('X_raw.shape =', X_raw.shape)
-        X_raw = np.delete(X_raw, [1, 3], 1)
-        print('X_raw.shape =', X_raw.shape)
+        for city_name in X_raw.keys():
+            X = X_raw[city_name]
+            Y = Y_raw[city_name]
+            X.shape = (X.shape[0], -1)
+            # X_train, X_valid, Y_train, Y_valid = train_test_split(X, Y, test_size=0.2)
+            X_train = X
+            Y_train = Y
 
-        X_train, X_valid, Y_train, Y_valid = train_test_split(X_raw, Y_raw, test_size=0.01)
+            self.boosters[city_name] = GradientBoostingRegressor(learning_rate=0.05, n_estimators=1000, max_depth=7, loss='lad', criterion='mse')
+            # self.boosters[city_name] = GradientBoostingRegressor(loss='ls', criterion='mse')
+            # self.boosters[city_name].fit(X_train, Y_train)
+            scores = cross_val_score(self.boosters[city_name], X_train, Y_train,
+                    scoring='neg_mean_absolute_error', cv=8, n_jobs=-1)
+            print(city_name, scores, scores.mean(), scores.std())
 
-        self.booster = GradientBoostingRegressor()
-        self.booster.fit(X_train, Y_train)
+            # predictions = self.boosters[city_name].predict(X_valid)
+            # mae_val = mean_absolute_error(Y_valid, np.round(predictions))
+            # print('MAE on valid set({}) is {}'.format(city_name, mae_val))
 
-        predictions = self.booster.predict(X_valid)
-        mae_val = mean_absolute_error(Y_valid, np.round(predictions))
-        print('MAE on valid set is {}'.format(mae_val))
+    def predict(self, X_raw):
+        cases = []
+        for city_name in X_raw.keys():
+            X = X_raw[city_name]
+            X.shape = (X.shape[0], -1)
+            predictions = self.boosters[city_name].predict(X)
+            cases += np.round(predictions).astype('int64').tolist()
+        return np.array(cases)
 
-    def predict(self, X_raw, outputs_path):
-        city_col = np.copy(X_raw[:, 0])
-        year_col = np.copy(X_raw[:, 1])
-        week_col = np.copy(X_raw[:, 2])
-        X_raw[:, 0] = [self.city2id[city_name] for city_name in X_raw[:, 0]]
-        X_raw = np.delete(X_raw, [1, 3], 1)
-        predictions = self.booster.predict(X_raw)
-
-        cols = {'city': city_col, 'year': year_col, 'weekofyear': week_col, 'total_cases': np.round(predictions).astype('int64')}
-        data_frame = DataFrame(cols, columns=['city', 'year', 'weekofyear', 'total_cases'])
-        data_frame.to_csv(outputs_path, index=False)
 
 if __name__ == '__main__':
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', help='features data path')
     parser.add_argument('--train', help='labels data path')
     parser.add_argument('--predict', help='outputs data path')
+    parser.add_argument('--test_feature')
     parser.add_argument('--model', default='gb-model.pkl')
     args = parser.parse_args()
 
@@ -53,8 +55,8 @@ if __name__ == '__main__':
     if args.train:
         features_path = args.data_path
         labels_path = args.train
-        features = DataReader.read_features(features_path)
-        labels = DataReader.read_labels(labels_path)
+        features = np.load(features_path)
+        labels = np.load(labels_path)
 
         regressor = Regressor()
         regressor.train(features, labels)
@@ -65,9 +67,14 @@ if __name__ == '__main__':
     if args.predict:
         features_path = args.data_path
         outputs_path = args.predict
-        features = DataReader.read_features(features_path)
+        original_features_path = args.test_feature
+        features = np.load(features_path)
 
         with open(model_path, 'rb') as model_f:
             regressor = pickle.load(model_f)
 
-        regressor.predict(features, outputs_path)
+        cases = regressor.predict(features)
+        print('cases.shape =', cases.shape)
+        writer = DataWriter(original_features_path)
+        writer.write_output(cases, outputs_path)
+

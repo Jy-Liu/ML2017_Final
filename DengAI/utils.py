@@ -28,3 +28,9 @@ class DataWriter:
                 'year': np.copy(data[:, 1]),
                 'weekofyear': np.copy(data[:, 2])}
         return cols
+
+    def write_output(self, prediction, output):
+        self.cols['total_cases'] = prediction
+        data_frame = DataFrame(self.cols, columns=label_headers)
+        data_frame.to_csv(outputs_path, index=False)
+

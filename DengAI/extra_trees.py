@@ -1,41 +1,45 @@
 import pickle
 import numpy as np
 from utils import DataWriter
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import mean_absolute_error
+from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.model_selection import cross_val_score
 
 
 class Regressor:
     def __init__(self):
-        self.boosters = {}
+        self.estimators = {}
 
-    def train(self, X_raw, Y_raw):
+    def train(self, X_raw, Y_raw, cv=0):
         for city_name in X_raw.keys():
             X = X_raw[city_name]
             Y = Y_raw[city_name]
             X.shape = (X.shape[0], -1)
-            # X_train, X_valid, Y_train, Y_valid = train_test_split(X, Y, test_size=0.2)
-            X_train = X
-            Y_train = Y
 
-            self.boosters[city_name] = GradientBoostingRegressor(learning_rate=0.05, n_estimators=1000, max_depth=7, loss='lad', criterion='mse')
-            # self.boosters[city_name] = GradientBoostingRegressor(loss='ls', criterion='mse')
-            # self.boosters[city_name].fit(X_train, Y_train)
-            scores = cross_val_score(self.boosters[city_name], X_train, Y_train,
-                    scoring='neg_mean_absolute_error', cv=8, n_jobs=-1)
-            print(city_name, scores, scores.mean(), scores.std())
+            self.estimators[city_name] = ExtraTreesRegressor(
+                    n_estimators=3000,
+                    max_depth=3,
+                    n_jobs=-1)
 
-            # predictions = self.boosters[city_name].predict(X_valid)
-            # mae_val = mean_absolute_error(Y_valid, np.round(predictions))
-            # print('MAE on valid set({}) is {}'.format(city_name, mae_val))
+            if cv > 0:
+                self.cross_val(city_name, X, Y, cv)
+
+            self.estimators[city_name].fit(X, Y)
+
+    def cross_val(self, city_name, X, Y, cv):
+        scores = cross_val_score(
+                self.estimators[city_name],
+                X, Y,
+                scoring='neg_mean_absolute_error',
+                cv=cv,
+                n_jobs=-1)
+        print('[Cross Validate]', city_name, scores, scores.mean(), scores.std())
 
     def predict(self, X_raw):
         cases = []
         for city_name in X_raw.keys():
             X = X_raw[city_name]
             X.shape = (X.shape[0], -1)
-            predictions = self.boosters[city_name].predict(X)
+            predictions = self.estimators[city_name].predict(X)
             cases += np.round(predictions).astype('int64').tolist()
         return np.array(cases)
 
@@ -47,7 +51,8 @@ if __name__ == '__main__':
     parser.add_argument('--train', help='labels data path')
     parser.add_argument('--predict', help='outputs data path')
     parser.add_argument('--test_feature')
-    parser.add_argument('--model', default='gb-model.pkl')
+    parser.add_argument('--model', default='et-model.pkl')
+    parser.add_argument('--cv', type=int, default=8)
     args = parser.parse_args()
 
     model_path = args.model
@@ -59,7 +64,7 @@ if __name__ == '__main__':
         labels = np.load(labels_path)
 
         regressor = Regressor()
-        regressor.train(features, labels)
+        regressor.train(features, labels, cv=args.cv)
 
         with open(model_path, 'wb') as model_f:
             pickle.dump(regressor, model_f)

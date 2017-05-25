@@ -69,7 +69,7 @@ def main(args):
             
             clf = xgb.train(param, dtrain=train_dmatrix, num_boost_round=num_boost_round, maximize=False)
             
-            save_path = os.path.join(depth_dir, 'xgb-model-seed-{}'.format(args.depth, i))
+            save_path = os.path.join(depth_dir, 'xgb-model-seed-{}'.format(i))
             
             clf.save_model(save_path)
 

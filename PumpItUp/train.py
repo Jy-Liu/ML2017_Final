@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import xgboost as xgb
+from scipy.stats import mode
 from utils import DataProcessor
 
 
@@ -88,8 +89,6 @@ def main(args):
             pred_overall.append(pred)
         
         pred_overall = mode(pred_overall, axis=0)[0].squeeze()
-        pred_overall = [label.cat.categories[i] for i in pred_overall]
-
         data.write_data('output.csv', pred_overall)
 
 

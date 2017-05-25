@@ -56,5 +56,7 @@ class DataProcessor():
         self.classes = labels.cat.categories
 
     def write_data(self, filename, pred): 
+        pred = [self.classes[i] for i in pred]
+
         output = pd.DataFrame({'id': self.id, 'status_group': pred}, columns=['id', 'status_group'])
         output.to_csv(filename, index=False, columns=('id', 'status_group'))

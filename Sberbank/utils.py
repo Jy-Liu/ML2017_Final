@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, Imputer
 
+
 class DataProcessor():
 
     def __init__(self):
@@ -65,3 +66,22 @@ class DataProcessor():
     def write_data(self, filename, pred):
         output = pd.DataFrame({'id': self.id, 'status_group': pred}, columns=['id', 'status_group'])
         output.to_csv(filename, index=False, columns=('id', 'status_group'))
+
+
+def split_valid(data, valid_ratio):
+    n_valid = int(data['x'].shape[0] * valid_ratio)
+
+    train, valid = {}, {}
+    for key in data:
+        train[key] = data[key][:-n_valid]
+        valid[key] = data[key][-n_valid:]
+
+    return train, valid
+
+
+def root_mean_squared_log_error(y_true, y_pred):
+    rmsle = np.sqrt(np.mean(
+        (np.log(y_true + 1) - np.log(y_pred + 1))**2
+        ))
+
+    return rmsle

@@ -88,6 +88,7 @@ def main(args):
     test_data = split_by_region(data, test_data, status='test')
 
     for r in data.regions:
+        if test_data[r].shape[0] == 0: continue
         regressor = testing_regressor[r]
         output = regressor.predict(test_data[r])
         ret[test_data['location_index'][r]] = output

@@ -48,7 +48,7 @@ class DataProcessor():
             if feature == 'sub_area':
                 le = LabelEncoder()
                 le.fit(all_corpus[feature])
-                self.region = le.classes_
+                self.regions = le.classes_
                 self.sub_area = list(all_corpus[feature])
                 del all_corpus[feature]
             elif data_type != 'float64' and data_type != 'int64':
@@ -83,7 +83,7 @@ def split_valid(data, valid_ratio):
         train[key] = data[key][:-n_valid]
         valid[key] = data[key][-n_valid:]
 
-    return train, valid
+    return train, valid, n_valid
 
 
 def root_mean_squared_log_error(y_true, y_pred):
@@ -94,3 +94,73 @@ def root_mean_squared_log_error(y_true, y_pred):
         ))
 
     return rmsle
+
+
+def split_by_region_init(regions):
+    dict = {}
+    for r in regions:
+        dict[r] = []
+    return dict
+
+
+def split_by_region(data, matrix, n_valid=0, status=None):
+    length = data.length
+
+    if status == 'train':
+        sub_area = data.sub_area[:length][:-n_valid]
+
+        regions = {}
+        for r in data.regions:
+            regions[r] = []
+
+        for i, area in enumerate(sub_area):
+            regions[area].append(i)
+
+        new_matrix = {}
+        for key in matrix:
+            tmp = {}
+            for r in data.regions:
+                tmp[r] = matrix[key][regions[r]]
+                print(key, r, tmp[r].shape, type(tmp[r]))
+            new_matrix[key] = tmp
+        return new_matrix
+
+    elif status == 'valid':
+        sub_area = data.sub_area[:length][-n_valid:]
+
+        regions = {}
+        for r in data.regions:
+            regions[r] = []
+
+        for i, area in enumerate(sub_area):
+            regions[area].append(i)
+
+        new_matrix = {}
+        for key in matrix:
+            tmp = {}
+            for r in data.regions:
+                tmp[r] = matrix[key][regions[r]]
+                print(key, r, tmp[r].shape, type(tmp[r]))
+            new_matrix[key] = tmp
+        return new_matrix
+
+    elif status == 'test':
+        sub_area = data.sub_area[length:]
+
+        regions = {}
+        for r in data.regions:
+            regions[r] = []
+
+        for i, area in enumerate(sub_area):
+            regions[area].append(i)
+
+        new_matrix = {}
+        for r in data.regions:
+            new_matrix[r] = matrix[regions[r]]
+            print(r, new_matrix[r].shape, type(new_matrix[r]))
+        new_matrix['location_index'] = regions
+        return new_matrix
+
+    else:
+        sys.exit(-1)
+

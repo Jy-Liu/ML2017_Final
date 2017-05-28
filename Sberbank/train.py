@@ -1,5 +1,6 @@
 import argparse
 from utils import DataProcessor, split_valid, root_mean_squared_log_error
+from utils import split_by_region
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 from sklearn.linear_model import Ridge, BayesianRidge, Lasso
 from xgb import XGBRegressor
@@ -36,10 +37,13 @@ def main(args):
                                      axis=1)
 
     # pdb.set_trace()
-    train, valid = split_valid(train_data, args.valid_ratio)
+    train, valid, n_valid = split_valid(train_data, args.valid_ratio)
 
-    train['x'] = normalize(train['x'])
-    valid['x'] = normalize(valid['x'])
+    train = split_by_region(data, train, n_valid=n_valid, status='train')
+    valid = split_by_region(data, valid, n_valid=n_valid, status='valid')
+
+    # train['x'] = normalize(train['x'])
+    # valid['x'] = normalize(valid['x'])
 
     regressors = {
         'RandomForest': RandomForestRegressor(n_estimators=50, n_jobs=-1),
@@ -50,23 +54,46 @@ def main(args):
         'Bayesian': BayesianRidge(normalize=True),
         'DNN': DNNRegressor(valid=valid)
     }
-    regressor = regressors[args.model]
-    regressor.fit(train['x'], train['y'])
-    train['y_'] = regressor.predict(train['x'])
-    valid['y_'] = regressor.predict(valid['x'])
-    train['rmsle'] = root_mean_squared_log_error(train['y'], train['y_'])
-    valid['rmsle'] = root_mean_squared_log_error(valid['y'], valid['y_'])
-    print('Train RMSLE = %f' % train['rmsle'])
-    print('Valid RMSLE = %f' % valid['rmsle'])
+
+    train['y_'] = {}
+    valid['y_'] = {}
+    train['rmsle'] = {}
+    valid['rmsle'] = {}
+    testing_regressor = {}
+    for r in data.regions:
+        regressor = regressors[args.model]
+        regressor.fit(train['x'][r], train['y'][r])
+        testing_regressor[r] = regressor
+        try:
+            train['y_'][r] = regressor.predict(train['x'][r])
+            valid['y_'][r] = regressor.predict(valid['x'][r])
+            train['rmsle'][r] = root_mean_squared_log_error(train['y'][r],
+                                                         train['y_'][r])
+            valid['rmsle'][r] = root_mean_squared_log_error(valid['y'][r],
+                                                         valid['y_'][r])
+            print('Train RMSLE on %s = %f' % (r, train['rmsle'][r]))
+            print('Valid RMSLE on %s = %f' % (r, valid['rmsle'][r]))
+        except:
+            continue
+
+
+
     # pdb.set_trace()
 
     macro_features = macro.extract_features(data.test)
     test_data = data.test[:, 2:]
     test_data = np.concatenate([test_data, macro_features], axis=1)
-    output = regressor.predict(test_data)
+    ret = np.zeros(test_data.shape[0])
+
+    test_data = split_by_region(data, test_data, status='test')
+
+    for r in data.regions:
+        regressor = testing_regressor[r]
+        output = regressor.predict(test_data[r])
+        ret[test_data['location_index'][r]] = output
 
     result = []
-    for i, v in enumerate(output):
+    for i, v in enumerate(ret):
         result.append('{},{}'.format(30474+i, v))
     with open(args.output, 'w+') as f:
         f.write('id,price_doc\n')

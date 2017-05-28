@@ -82,6 +82,7 @@ def split_valid(data, valid_ratio):
 def root_mean_squared_log_error(y_true, y_pred):
     y_true = np.array(y_true, dtype=float)
     y_pred = np.array(y_pred, dtype=float)
+    y_pred = np.where(y_pred > 0, y_pred, 0)
     rmsle = np.sqrt(np.mean(
         (np.log(y_true + 1) - np.log(y_pred + 1))**2
         ))

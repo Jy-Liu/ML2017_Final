@@ -38,24 +38,29 @@ def main(args):
     # pdb.set_trace()
     train, valid = split_valid(train_data, args.valid_ratio)
 
-    train['x'] = normalize(train['x'])
-    valid['x'] = normalize(valid['x'])
+    # train['x'] = normalize(train['x'])
+    # valid['x'] = normalize(valid['x'])
 
+    train['log_y'] = np.log(train['y'])
+    valid['log_y'] = np.log(valid['y'])
     regressors = {
         'RandomForest': RandomForestRegressor(n_estimators=50, n_jobs=-1),
         'ExtraTrees': ExtraTreesRegressor(n_estimators=500, n_jobs=-1),
-        'XGB': XGBRegressor(n_rounds=500, max_depth=13),
+        'XGB': XGBRegressor(n_rounds=1000, max_depth=5,
+                            valid={'x': valid['x'], 'y': valid['log_y']}),
         'Ridge': Ridge(normalize=True, alpha=0),
         'Lasso': Lasso(normalize=True),
         'Bayesian': BayesianRidge(normalize=True),
         'DNN': DNNRegressor(valid=valid)
     }
     regressor = regressors[args.model]
-    regressor.fit(train['x'], train['y'])
-    train['y_'] = regressor.predict(train['x'])
-    valid['y_'] = regressor.predict(valid['x'])
-    train['rmsle'] = root_mean_squared_log_error(train['y'], train['y_'])
-    valid['rmsle'] = root_mean_squared_log_error(valid['y'], valid['y_'])
+    regressor.fit(train['x'], train['log_y'])
+    train['log_y_'] = regressor.predict(train['x'])
+    valid['log_y_'] = regressor.predict(valid['x'])
+    train['rmsle'] = root_mean_squared_log_error(train['y'],
+                                                 np.exp(train['log_y_']))
+    valid['rmsle'] = root_mean_squared_log_error(valid['y'],
+                                                 np.exp(valid['log_y_']))
     print('Train RMSLE = %f' % train['rmsle'])
     print('Valid RMSLE = %f' % valid['rmsle'])
     # pdb.set_trace()
@@ -63,7 +68,7 @@ def main(args):
     macro_features = macro.extract_features(data.test)
     test_data = data.test[:, 2:]
     test_data = np.concatenate([test_data, macro_features], axis=1)
-    output = regressor.predict(test_data)
+    output = np.exp(regressor.predict(test_data))
 
     result = []
     for i, v in enumerate(output):

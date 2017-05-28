@@ -41,6 +41,7 @@ class Macro:
         cols: list
             List of columns name of macro.csv that should be considered.
         """
+        print('Extracting features in macro')
         date_list = list(self.macro['timestamp'])
         features = np.zeros((len(data), len(cols)))
         for i in range(len(data)):
@@ -50,4 +51,5 @@ class Macro:
                                        date_index + interval[1]]
             features[i] = np.mean(related.as_matrix(), axis=0)
 
+        print('Extraing done!!!')
         return features

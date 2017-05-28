@@ -35,7 +35,7 @@ class DataProcessor():
     def preprocess(self):
         train = self.raw_train_features
         test = self.raw_test_features
-        train_label = train['price_doc']
+        label = train['price_doc']
         train_size = train.shape[0]
         del train['price_doc']
         features = train.columns.values
@@ -45,7 +45,13 @@ class DataProcessor():
             if feature == 'timestamp' or feature == 'id':
                 continue
             data_type = all_corpus[feature].dtype
-            if data_type != 'float64' and data_type != 'int64':
+            if feature == 'sub_area':
+                le = LabelEncoder()
+                le.fit(all_corpus[feature])
+                self.region = le.classes_
+                self.sub_area = list(all_corpus[feature])
+                del all_corpus[feature]
+            elif data_type != 'float64' and data_type != 'int64':
                 print(feature)
                 new_dataframe = pd.get_dummies(all_corpus[feature])
                 # print(new_dataframe)
@@ -58,10 +64,11 @@ class DataProcessor():
         all_corpus_np = all_corpus.as_matrix()
         train = all_corpus_np[:train_size]
         test = all_corpus_np[train_size:]
-        train = pd.concat([pd.DataFrame(train), train_label], axis=1)
+        train = pd.concat([pd.DataFrame(train), label], axis=1).as_matrix()
 
-        self.train = train.as_matrix()
+        self.train = train
         self.test = test
+        self.length = train_size
 
     def write_data(self, filename, pred):
         output = pd.DataFrame({'id': self.id, 'status_group': pred}, columns=['id', 'status_group'])

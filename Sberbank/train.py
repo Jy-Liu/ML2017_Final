@@ -16,6 +16,7 @@ def parse_args():
     parser.add_argument('test', type=str)
     parser.add_argument('--model', type=str, default='RandomForest')
     parser.add_argument('--valid_ratio', type=float, default=0.1)
+    parser.add_argument('--output', type=str, default='output')
     return parser.parse_args()
 
 
@@ -31,7 +32,7 @@ def main(args):
     train_data['x'] = np.concatenate([train_data['x'], macro_features],
                                      axis=1)
 
-    pdb.set_trace()
+    # pdb.set_trace()
     train, valid = split_valid(train_data, args.valid_ratio)
 
     regressors = {
@@ -47,7 +48,19 @@ def main(args):
     valid['rmsle'] = root_mean_squared_log_error(valid['y'], valid['y_'])
     print('Train RMSLE = %f' % train['rmsle'])
     print('Valid RMSLE = %f' % valid['rmsle'])
-    pdb.set_trace()
+    # pdb.set_trace()
+
+    macro_features = macro.extract_features(data.test)
+    test_data = data.test[:, 2:]
+    test_data = np.concatenate([test_data, macro_features], axis=1)
+    output = regressor.predict(test_data)
+
+    result = []
+    for i, v in enumerate(output):
+        result.append('{},{}'.format(30474+i, v))
+    with open(args.output, 'w+') as f:
+        f.write('id,price_doc\n')
+        f.write('\n'.join(result))
 
 
 if __name__ == '__main__':

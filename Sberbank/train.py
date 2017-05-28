@@ -1,12 +1,15 @@
 import argparse
 from utils import DataProcessor, split_valid, root_mean_squared_log_error
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
+from sklearn.linear_model import Ridge, BayesianRidge, Lasso
 from xgb import XGBRegressor
 from macro import Macro
 import numpy as np
 import pdb
 import sys
 import traceback
+from dnn import DNNRegressor
+from sklearn.preprocessing import normalize
 
 
 def parse_args():
@@ -34,11 +37,18 @@ def main(args):
     # pdb.set_trace()
     train, valid = split_valid(train_data, args.valid_ratio)
 
+    train['x'] = normalize(train['x'])
+    valid['x'] = normalize(valid['x'])
+
     regressors = {
         'RandomForest': RandomForestRegressor(n_estimators=50, n_jobs=-1),
         'ExtraTrees': ExtraTreesRegressor(n_estimators=500, n_jobs=-1),
-        'XGB': XGBRegressor(n_rounds=500, max_depth=13)
-        }
+        'XGB': XGBRegressor(n_rounds=500, max_depth=13),
+        'Ridge': Ridge(normalize=True, alpha=0),
+        'Lasso': Lasso(normalize=True),
+        'Bayesian': BayesianRidge(normalize=True),
+        'DNN': DNNRegressor(valid=valid)
+    }
     regressor = regressors[args.model]
     regressor.fit(train['x'], train['y'])
     train['y_'] = regressor.predict(train['x'])

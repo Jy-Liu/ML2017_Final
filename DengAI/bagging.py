@@ -56,7 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--train', help='labels data path')
     parser.add_argument('--predict', help='outputs data path')
     parser.add_argument('--test_feature')
-    parser.add_argument('--model', default='et-model.pkl')
+    parser.add_argument('--model', default='bg-model.pkl')
     parser.add_argument('--cv', type=int, default=8)
     args = parser.parse_args()
 

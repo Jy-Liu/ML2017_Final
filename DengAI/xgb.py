@@ -15,6 +15,11 @@ class Regressor:
             Y = Y_raw[city_name]
             X.shape = (X.shape[0], -1)
 
+            # shuffle training data
+            perm = np.random.permutation(X.shape[0])
+            X = X[perm]
+            Y = Y[perm]
+
             num_boost_round=150
             param = {
                     'booster': 'gbtree',

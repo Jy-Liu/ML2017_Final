@@ -15,11 +15,12 @@ class DataProcessor:
     @classmethod
     def split_cities(cls, data, label=False, block_size=4):
         if label:
-            maps = {'sj': data[data[:, 0] == 'sj'][block_size-1:, -1],
-                    'iq': data[data[:, 0] == 'iq'][block_size-1:, -1]}
+            maps = {'sj': data[data[:, 0] == 'sj'][block_size-1:, 1:],
+                    'iq': data[data[:, 0] == 'iq'][block_size-1:, 1:]}
         else:
-            maps = {'sj': data[data[:, 0] == 'sj'][:, block_size:],
-                    'iq': data[data[:, 0] == 'iq'][:, block_size:]}
+            selected_col = np.r_[1, 2, 4:data.shape[1]]
+            maps = {'sj': data[data[:, 0] == 'sj'][:, selected_col],
+                    'iq': data[data[:, 0] == 'iq'][:, selected_col]}
         return maps
 
     @classmethod

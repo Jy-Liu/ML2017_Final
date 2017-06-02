@@ -15,8 +15,8 @@ class DataProcessor:
     @classmethod
     def split_cities(cls, data, label=False, block_size=4):
         if label:
-            maps = {'sj': data[data[:, 0] == 'sj'][block_size-1:, 1:],
-                    'iq': data[data[:, 0] == 'iq'][block_size-1:, 1:]}
+            maps = {'sj': data[data[:, 0] == 'sj'][block_size-1:, 3],
+                    'iq': data[data[:, 0] == 'iq'][block_size-1:, 3]}
         else:
             selected_col = np.r_[1, 2, 4:data.shape[1]]
             maps = {'sj': data[data[:, 0] == 'sj'][:, selected_col],

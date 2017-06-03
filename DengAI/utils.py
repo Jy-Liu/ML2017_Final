@@ -9,7 +9,8 @@ class DataReader:
     def read_features(cls, file_path):
         data_frame = read_csv(file_path)
         # handle NaN
-        data_frame = data_frame.fillna(0.0)
+        data_frame = data_frame.fillna(method='pad')
+        data_frame = data_frame.fillna(method='backfill')
         return data_frame.values
 
     @classmethod

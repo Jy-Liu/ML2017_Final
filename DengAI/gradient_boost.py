@@ -14,21 +14,24 @@ class Regressor:
             X = X_raw[city_name]
             Y = Y_raw[city_name]
             X.shape = (X.shape[0], -1)
+            print('X.shape =', X.shape)
+            print('Y.shape =', Y.shape)
+
+            mask = np.ones(X.shape[1], dtype='bool')
+            mask[[0, 22, 44, 66]] = False
+            X = X[:, mask]
+            print('X.shape =', X.shape)
 
             # shuffle training data
+            np.random.seed(seed=5)
             perm = np.random.permutation(X.shape[0])
             X = X[perm]
             Y = Y[perm]
 
-            # self.estimators[city_name] = GradientBoostingRegressor(
-            #         loss='lad',
-            #         n_estimators=100,
-            #         max_depth=3,
-            #         criterion='friedman_mse')
             self.estimators[city_name] = GradientBoostingRegressor(
                     loss='lad',
                     n_estimators=100,
-                    max_depth=3,
+                    max_depth=9,
                     criterion='mae')
 
             if cv > 0:
@@ -50,6 +53,9 @@ class Regressor:
         for city_name in X_raw.keys():
             X = X_raw[city_name]
             X.shape = (X.shape[0], -1)
+            mask = np.ones(X.shape[1], dtype='bool')
+            mask[[0, 22, 44, 66]] = False
+            X = X[:, mask]
             predictions = self.estimators[city_name].predict(X)
             cases += np.round(predictions).astype('int64').tolist()
         return np.array(cases)

@@ -15,15 +15,14 @@ class Regressor:
             X = X_raw[city_name]
             Y = Y_raw[city_name]
             X.shape = (X.shape[0], -1)
-            # X = X[:, :]
+            mask = np.ones(X.shape[1], dtype='bool')
+            mask[[0, 22, 44, 66]] = False
+            X = X[:, mask]
 
             # shuffle training data
             perm = np.random.permutation(X.shape[0])
             X = X[perm]
             Y = Y[perm]
-
-            # indices = [feat + i * 20 for feat in [1, 2, 3, 4, 7, 8, 13, 15, 17, 18] for i in range(4)]
-            # X = X[:, indices]
 
             self.estimators[city_name] = ExtraTreesRegressor(
                     n_estimators=3000,
@@ -52,6 +51,9 @@ class Regressor:
         for city_name in X_raw.keys():
             X = X_raw[city_name]
             X.shape = (X.shape[0], -1)
+            mask = np.ones(X.shape[1], dtype='bool')
+            mask[[0, 22, 44, 66]] = False
+            X = X[:, mask]
             predictions = self.estimators[city_name].predict(X)
             cases += np.round(predictions).astype('int64').tolist()
         return np.array(cases)

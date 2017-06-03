@@ -15,6 +15,11 @@ class Regressor:
             Y = Y_raw[city_name]
             X.shape = (X.shape[0], -1)
 
+            mask = np.ones(X.shape[1], dtype='bool')
+            mask[[0, 22, 44, 66]] = False
+            X = X[:, mask]
+            print('X.shape =', X.shape)
+
             # shuffle training data
             perm = np.random.permutation(X.shape[0])
             X = X[perm]

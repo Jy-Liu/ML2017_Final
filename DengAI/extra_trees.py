@@ -3,7 +3,6 @@ import numpy as np
 from utils import DataWriter
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.model_selection import cross_val_score
-from sklearn.feature_selection import RFECV
 
 
 class Regressor:
@@ -16,7 +15,7 @@ class Regressor:
             Y = Y_raw[city_name]
             X.shape = (X.shape[0], -1)
             mask = np.ones(X.shape[1], dtype='bool')
-            mask[[0, 22, 44, 66]] = False
+            mask[[0, 2, 22, 24, 44, 46, 66, 68]] = False
             X = X[:, mask]
 
             # shuffle training data
@@ -26,14 +25,12 @@ class Regressor:
 
             self.estimators[city_name] = ExtraTreesRegressor(
                     n_estimators=3000,
-                    max_depth=3,
+                    max_depth=7,
+                    criterion='mae',
                     n_jobs=-1)
 
             if cv > 0:
                 self.cross_val(city_name, X, Y, cv)
-                # selector = RFECV(self.estimators[city_name], cv=4, step=2, verbose=1, scoring='neg_mean_absolute_error')
-                # selector.fit(X, Y)
-                # print('ranking:', selector.ranking_)
 
             self.estimators[city_name].fit(X, Y)
 
@@ -52,7 +49,7 @@ class Regressor:
             X = X_raw[city_name]
             X.shape = (X.shape[0], -1)
             mask = np.ones(X.shape[1], dtype='bool')
-            mask[[0, 22, 44, 66]] = False
+            mask[[0, 2, 22, 24, 44, 46, 66, 68]] = False
             X = X[:, mask]
             predictions = self.estimators[city_name].predict(X)
             cases += np.round(predictions).astype('int64').tolist()

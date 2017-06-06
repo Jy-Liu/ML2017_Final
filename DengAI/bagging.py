@@ -16,7 +16,7 @@ class Regressor:
             X.shape = (X.shape[0], -1)
 
             mask = np.ones(X.shape[1], dtype='bool')
-            mask[[0, 22, 44, 66]] = False
+            mask[[0, 2, 22, 24, 44, 46, 66, 68]] = False
             X = X[:, mask]
             print('X.shape =', X.shape)
 
@@ -49,6 +49,9 @@ class Regressor:
         for city_name in X_raw.keys():
             X = X_raw[city_name]
             X.shape = (X.shape[0], -1)
+            mask = np.ones(X.shape[1], dtype='bool')
+            mask[[0, 2, 22, 24, 44, 46, 66, 68]] = False
+            X = X[:, mask]
             predictions = self.estimators[city_name].predict(X)
             cases += np.round(predictions).astype('int64').tolist()
         return np.array(cases)

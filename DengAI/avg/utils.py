@@ -76,7 +76,30 @@ class DataProcessor:
 
         return normalized_data
 
-    def get_train(self, city, selected_features):
+    @staticmethod
+    def _split_valid(df, valid_ratio, shuffle=False):
+        if shuffle:
+            df = df.sample(frac=1)
+
+        n_rows = df.shape[0]
+        n_valid = int(n_rows * valid_ratio)
+        df_train = df.head(n_rows - n_valid)
+        df_valid = df.tail(n_valid)
+
+        return df_train, df_valid
+
+    def _get_label(self, df, city):
+        """
+        Do label preprocessing here.
+        """
+        week_of_year = df['week_of_year']
+        total_cases = df['total_cases'].reshape(-1, 1)
+        y = self._weekwise_normalize(week_of_year,
+                                     total_cases,
+                                     self.mean_cases_of_weeks[city])
+        return y.reshape(-1,)
+
+    def get_train(self, city):
         """
         Call preprocessing functions here.
 
@@ -98,18 +121,37 @@ class DataProcessor:
         train = {}
 
         df = self.train_dfs[city]
-        train['x'] = df[selected_features].as_matrix()
-
-        week_of_year = df['week_of_year']
-        total_cases = df['total_cases']
-        self.mean_cases_of_weeks['city'] = \
-            self._get_week_mean(week_of_year, total_cases)
-
-        train['y'] = self._weekwise_normalize(week_of_year,
-                                              total_cases,
-                                              self.mean_cases_of_weeks['city'])
+        train['x'] = df[self.selected_features].as_matrix()
+        train['y'] = self._get_label(df, city)
 
         return train
+
+    def get_valid(self, city):
+        """
+        Call preprocessing functions here.
+
+        Parameter
+        ---------
+        city: string
+            Either 'iq' or 'sj'.
+        selected_features: list of strings.
+            Names of culumns that should be used to train.
+
+        Return
+        ------
+        valid: dict
+            valid['x']: np array of shape (n_rows, len(selected_features))
+                Preprocessed features.
+            valid['y']: np array of shape (n_rows,)
+                Preprocessed labels.
+        """
+        valid = {}
+
+        df = self.valid_dfs[city]
+        valid['x'] = df[self.selected_features].as_matrix()
+        valid['y'] = self._get_label(df, city)
+
+        return valid
 
     def get_test(self, city, selected_features):
         """
@@ -131,13 +173,12 @@ class DataProcessor:
                 Preprocessed labels.
         """
         test = {}
-
-        test['x'] = self.test_dfs[selected_features].as_matrix()
+        test['x'] = self.test_dfs[city][selected_features].as_matrix()
 
         return test
 
     def __init__(self, train_feature, train_label,
-                 test_feature,
+                 test_feature, valid_ratio,
                  selected_features):
         """
         Data Preprocessor
@@ -153,7 +194,24 @@ class DataProcessor:
         selected_features: list of strings
             Names of culumns that should be used to train.
         """
-        self.train_dfs = self._read_csv(train_feature, train_label)
+        # read train
+        whole_train_dfs = self._read_csv(train_feature, train_label)
+
+        self.train_dfs = {}
+        self.valid_dfs = {}
+
+        for city in ['iq', 'sj']:
+            # split valid
+            self.train_dfs[city], self.valid_dfs[city] = \
+                self._split_valid(whole_train_dfs['iq'])
+
+            # calculate week mean
+            week_of_year = self.train_dfs[city]['week_of_year']
+            total_cases = self.train_dfs[city]['total_cases']
+            self.mean_cases_of_weeks[city] = \
+                self._get_week_mean(week_of_year, total_cases)
+
+        # read test
         self.test_dfs = self._read_csv(test_feature)
         self.mean_cases_of_weeks = {}
         self.selected_features = selected_features

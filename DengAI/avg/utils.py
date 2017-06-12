@@ -5,7 +5,7 @@ import pandas as pd
 class DataProcessor:
 
     @staticmethod
-    def _read_csv(self, feature, label=None):
+    def _read_csv(feature, label=None):
         df = pd.read_csv(feature)
 
         if label is not None:
@@ -45,7 +45,7 @@ class DataProcessor:
             week_mean = np.mean(data[indices], axis=0)
             mean_of_weeks.append(week_mean)
 
-            return np.array(mean_of_weeks)
+        return np.array(mean_of_weeks)
 
     @staticmethod
     def _weekwise_normalize(data_week, data, mean_of_weeks):
@@ -72,7 +72,7 @@ class DataProcessor:
             indices = np.where(data_week == week)
 
             # minus week mean
-            normalized_data[indices] = data[indices] - mean_of_weeks[week]
+            normalized_data[indices] = data[indices] - mean_of_weeks[week - 1]
 
         return normalized_data
 
@@ -92,7 +92,7 @@ class DataProcessor:
         """
         Do label preprocessing here.
         """
-        week_of_year = df['week_of_year']
+        week_of_year = df['weekofyear']
         total_cases = df['total_cases'].reshape(-1, 1)
         y = self._weekwise_normalize(week_of_year,
                                      total_cases,
@@ -153,7 +153,7 @@ class DataProcessor:
 
         return valid
 
-    def get_test(self, city, selected_features):
+    def get_test(self, city):
         """
         Do all the preprocessing.
 
@@ -173,7 +173,7 @@ class DataProcessor:
                 Preprocessed labels.
         """
         test = {}
-        test['x'] = self.test_dfs[city][selected_features].as_matrix()
+        test['x'] = self.test_dfs[city][self.selected_features].as_matrix()
 
         return test
 
@@ -199,19 +199,19 @@ class DataProcessor:
 
         self.train_dfs = {}
         self.valid_dfs = {}
+        self.mean_cases_of_weeks = {}
 
         for city in ['iq', 'sj']:
             # split valid
             self.train_dfs[city], self.valid_dfs[city] = \
-                self._split_valid(whole_train_dfs['iq'])
+                self._split_valid(whole_train_dfs['iq'], valid_ratio)
 
             # calculate week mean
-            week_of_year = self.train_dfs[city]['week_of_year']
-            total_cases = self.train_dfs[city]['total_cases']
+            week_of_year = self.train_dfs[city]['weekofyear'].as_matrix()
+            total_cases = self.train_dfs[city]['total_cases'].as_matrix()
             self.mean_cases_of_weeks[city] = \
                 self._get_week_mean(week_of_year, total_cases)
 
         # read test
         self.test_dfs = self._read_csv(test_feature)
-        self.mean_cases_of_weeks = {}
         self.selected_features = selected_features

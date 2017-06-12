@@ -20,7 +20,7 @@ def main():
                         help='dimension of latent feature')
     args = parser.parse_args()
 
-    selected_features = ['total_cases', 'ndvi_nw', 'precipitation_amt_mm',
+    selected_features = ['ndvi_nw', 'precipitation_amt_mm',
                          'reanalysis_max_air_temp_k',
                          'reanalysis_dew_point_temp_k',
                          'reanalysis_specific_humidity_g_per_kg']

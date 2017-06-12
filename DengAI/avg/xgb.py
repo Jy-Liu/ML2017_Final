@@ -1,10 +1,4 @@
 import xgboost as xgb
-from utils import root_mean_squared_log_error
-
-
-def rmsle(preds, dtrain):
-    truth = dtrain.get_label()
-    return 'error', root_mean_squared_log_error(truth, preds)
 
 
 class XGBRegressor:

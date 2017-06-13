@@ -5,7 +5,7 @@ import numpy as np
 import argparse
 from xgb import XGBRegressor
 from utils import DataProcessor
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 from sklearn.metrics import mean_absolute_error
 from plot import plot_pred
 
@@ -15,6 +15,8 @@ def main():
     parser.add_argument('feature_train', type=str, help='feature_train.csv')
     parser.add_argument('label_train', type=str, help='label_train.csv')
     parser.add_argument('feature_test', type=str, help='feature_test.csv')
+    parser.add_argument('--reg', type=str, default='xgb',
+                        help='regressor to use')
     parser.add_argument('--n_iters', type=int, default=100,
                         help='number of epochs')
     parser.add_argument('--lr', type=float, default=0.001,
@@ -52,18 +54,26 @@ def main():
         test = data_processor.get_test(city)
 
         # start training
-        clf = XGBRegressor(n_rounds=args.n_iters, max_depth=4, valid=valid)
-        # clf = RandomForestRegressor(n_estimators=1000, n_jobs=-1)
-        clf.fit(train['x'], train['y'])
+        regs = {'xgb': XGBRegressor(n_rounds=args.n_iters,
+                                    max_depth=4, valid=valid),
+                'rf': RandomForestRegressor(n_estimators=1000, n_jobs=-1),
+                'et': ExtraTreesRegressor(n_estimators=500, n_jobs=-1)}
+        reg = regs[args.reg]
 
-        train['y_'] = clf.predict(train['x'])
-        valid['y_'] = clf.predict(valid['x'])
+        reg.fit(train['x'], train['y'])
+
+        train['y_'] = reg.predict(train['x'])
+        valid['y_'] = reg.predict(valid['x'])
         print('city = %s' % city)
         print('train mae = %f' % mean_absolute_error(train['y_'], train['y']))
         print('valid mae = %f' % mean_absolute_error(valid['y_'], valid['y']))
-        test['y_'] = clf.predict(test['x'])
+        test['y_'] = reg.predict(test['x'])
 
-        plot_pred('%s.png' % city, valid['y'], valid['y_'])
+        plot_pred('%s-%s-train.png' % (args.reg, city),
+                  train['y_'], train['y'])
+        plot_pred('%s-%s-valid.png' % (args.reg, city),
+                  valid['y_'], valid['y'])
+        plot_pred('%s-%s-test.png' % (args.reg, city), test['y_'])
         print('====================================')
 
 

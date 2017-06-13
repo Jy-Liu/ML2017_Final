@@ -204,7 +204,7 @@ class DataProcessor:
         for city in ['iq', 'sj']:
             # split valid
             self.train_dfs[city], self.valid_dfs[city] = \
-                self._split_valid(whole_train_dfs['iq'], valid_ratio)
+                self._split_valid(whole_train_dfs[city], valid_ratio)
 
             # calculate week mean
             week_of_year = self.train_dfs[city]['weekofyear'].as_matrix()

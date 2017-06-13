@@ -1,3 +1,5 @@
+import logging 
+import numpy as np
 import xgboost as xgb
 
 
@@ -9,7 +11,8 @@ class XGBRegressor:
                       'subsample': 1.0,
                       'colsample_bytree': 0.7,
                       'objective': 'reg:linear',
-                      'eval_metric': 'mae'}
+                      'eval_metric': 'mae',
+                      'silent': 1}
         self.n_rounds = n_rounds
         self.valid = valid
 
@@ -23,6 +26,11 @@ class XGBRegressor:
 
         self.estimator = xgb.train(self.param, dtrain,
                                    self.n_rounds, evals=evals,
+                                   early_stopping_rounds=20,
+                                   verbose_eval=False)
+        best_iter = self.estimator.best_iteration + 1
+        self.estimator = xgb.train(self.param, dtrain,
+                                   best_iter, evals=evals,
                                    early_stopping_rounds=20)
 
     def predict(self, X):

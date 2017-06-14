@@ -48,6 +48,34 @@ class DataProcessor:
         return np.array(mean_of_weeks)
 
     @staticmethod
+    def _get_week_median(data_week, data):
+        """
+        Get median of data of each week.
+
+        Parameter
+        ---------
+        data_week: np array of shape (n_rows,)
+        Week of year of rows in the data.
+        data: np array of shape (n_rows, n_features)
+        Features to be normalized.
+
+        Return
+        ------
+        median_of_weeks: np array of shape (n_weeks, n_features)
+            Median of data of weeks.
+        """
+        median_of_weeks = []
+        for week in range(1, 54):
+            # indices of data that is of the week
+            indices = np.where(data_week == week)
+
+            # calculate mean of the week
+            week_mean = np.median(data[indices], axis=0)
+            median_of_weeks.append(week_mean)
+
+        return np.array(median_of_weeks)
+
+    @staticmethod
     def _weekwise_normalize(data_week, data, mean_of_weeks):
         """
         Minus data by mean of each week.
@@ -94,10 +122,20 @@ class DataProcessor:
         """
         week_of_year = df['weekofyear']
         total_cases = df['total_cases'].reshape(-1, 1)
-        y = self._weekwise_normalize(week_of_year,
-                                     total_cases,
-                                     self.mean_cases_of_weeks[city])
+        y = total_cases
+        # y = self._weekwise_normalize(week_of_year,
+        #                              total_cases,
+        #                              self.mean_cases_of_weeks[city])
         return y.reshape(-1,)
+
+    def _get_feature(self, df, city):
+        week_of_year = df['weekofyear']
+        features = df[self.selected_features].as_matrix()
+        x = features
+        # x = self._weekwise_normalize(week_of_year,
+        #                              features,
+        #                              self.feature_mean[city])
+        return x
 
     def get_train(self, city):
         """
@@ -121,7 +159,8 @@ class DataProcessor:
         train = {}
 
         df = self.train_dfs[city]
-        train['x'] = df[self.selected_features].as_matrix()
+        # train['x'] = df[self.selected_features].as_matrix()
+        train['x'] = self._get_feature(df, city)
         train['y'] = self._get_label(df, city)
 
         return train
@@ -148,7 +187,8 @@ class DataProcessor:
         valid = {}
 
         df = self.valid_dfs[city]
-        valid['x'] = df[self.selected_features].as_matrix()
+        # valid['x'] = df[self.selected_features].as_matrix()
+        valid['x'] = self._get_feature(df, city)
         valid['y'] = self._get_label(df, city)
 
         return valid
@@ -173,9 +213,37 @@ class DataProcessor:
                 Preprocessed labels.
         """
         test = {}
-        test['x'] = self.test_dfs[city][self.selected_features].as_matrix()
+        # test['x'] = self.test_dfs[city][self.selected_features].as_matrix()
+        test['x'] = self._get_feature(self.test_dfs[city], city)
 
         return test
+
+    def write_predict(self, filename, sj_y, iq_y):
+        """
+        Parameter
+        ---------
+        """
+
+        # normalized with minus mean to shift back
+        sj_y = self._weekwise_normalize(self.test_dfs['sj']['weekofyear']
+                                        .as_matrix(), sj_y,
+                                        -self.mean_cases_of_weeks['sj'])
+        iq_y = self._weekwise_normalize(self.test_dfs['iq']['weekofyear']
+                                        .as_matrix(), iq_y,
+                                        -self.mean_cases_of_weeks['iq'])
+
+        # make df of sj and iq
+        sj_df = self.test_dfs['sj'][['city', 'year', 'weekofyear']]
+        sj_df['total_cases'] = np.array(np.round(sj_y), dtype=int)
+        # sj_df['total_cases'] = sj_df['total_cases'].shift(6)
+        # sj_df['total_cases'] = sj_df['total_cases'].fillna(method='bfill')
+        iq_df = self.test_dfs['iq'][['city', 'year', 'weekofyear']]
+        sj_df['total_cases'] = sj_df['total_cases'].astype(int)
+        iq_df['total_cases'] = np.array(np.round(iq_y), dtype=int)
+
+        # concat and dump out
+        df = pd.concat([sj_df, iq_df])
+        df.to_csv(filename, index=False)
 
     def __init__(self, train_feature, train_label,
                  test_feature, valid_ratio,
@@ -200,6 +268,8 @@ class DataProcessor:
         self.train_dfs = {}
         self.valid_dfs = {}
         self.mean_cases_of_weeks = {}
+        self.feature_mean = {}
+        self.selected_features = selected_features
 
         for city in ['iq', 'sj']:
             # split valid
@@ -207,11 +277,18 @@ class DataProcessor:
                 self._split_valid(whole_train_dfs[city], valid_ratio)
 
             # calculate week mean
-            week_of_year = self.train_dfs[city]['weekofyear'].as_matrix()
-            total_cases = self.train_dfs[city]['total_cases'].as_matrix()
+            last_year = self.train_dfs[city]['year'].max()
+            indices = self.train_dfs[city]['year'] > 0
+            week_of_year = self.train_dfs[city].loc[
+                indices]['weekofyear'].as_matrix()
+            total_cases = self.train_dfs[city].loc[
+                indices]['total_cases'].as_matrix()
+            features = self.train_dfs[city].loc[
+                indices][self.selected_features].as_matrix()
             self.mean_cases_of_weeks[city] = \
                 self._get_week_mean(week_of_year, total_cases)
+            self.feature_mean[city] = \
+                self._get_week_mean(week_of_year, features)
 
         # read test
         self.test_dfs = self._read_csv(test_feature)
-        self.selected_features = selected_features

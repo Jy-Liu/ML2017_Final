@@ -21,20 +21,21 @@ def main():
     parser = argparse.ArgumentParser(description='Plot spatial distribution ')
     parser.add_argument('train_feature', type=str, help='feature_train.csv')
     parser.add_argument('train_label', type=str, help='feature_train.csv')
+    parser.add_argument('--out', default='spatial.png', type=str, help='output image filename')
     args = parser.parse_args()
 
     train = read_data(args.train_feature,
                       args.train_label)
     train = train[train['longitude'] > 1]
 
-    tiler = cimgt.GoogleTiles(style='terrain')
+    tiler = cimgt.GoogleTiles()
     mercator = tiler.crs
     fig = plt.figure(dpi=300, figsize=(5, 5))
     ax = fig.add_subplot(1, 1, 1,
                          projection=mercator)
 
     # plot map
-    ax.add_image(tiler, 6)
+    ax.add_image(tiler, 8)
     ax.coastlines(resolution='50m', color='black', linewidth=1)
     ax.add_feature(cfeature.BORDERS)
 
@@ -54,10 +55,8 @@ def main():
                 transform=ccrs.Geodetic())
     ax.set_extent([longitude.min() - 0.5, longitude.max() + 0.5,
                    latitude.min() - 0.5, latitude.max() + 0.5])
-
-    red_dot = plt.plot(z, "ro", markersize=15)
     # ax.legend()
-    plt.savefig('/tmp/t.png')
+    plt.savefig(args.out)
 
 if __name__ == '__main__':
     try:

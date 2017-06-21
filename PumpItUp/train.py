@@ -14,9 +14,9 @@ def parse_args():
     parser.add_argument('--label', required=True)
     parser.add_argument('--test', required=True)
     parser.add_argument('--cv', type=int, default=4)
-    parser.add_argument('--eta', type=float, default=0.2)
-    parser.add_argument('--depth', type=int, default=20)
-    parser.add_argument('--seed', nargs=2, type=int, default=[0, 15])
+    parser.add_argument('--eta', type=float, default=0.025)
+    parser.add_argument('--depth', type=int, default=23)
+    parser.add_argument('--seed', nargs=2, type=int, default=[60, 73])
     parser.add_argument('--model', nargs='*')
     return parser.parse_args()
 
@@ -62,10 +62,10 @@ def main(args):
             logger.info('Cross validate with seed {}, depth {}, {}-fold'.format(i, args.depth, args.cv))
             
             param['seed'] = i
-            res = xgb.cv(param, dtrain=train_dmatrix, seed=i, num_boost_round=500, 
-                    nfold=args.cv, early_stopping_rounds=10, maximize=False, verbose_eval=True)
-            num_boost_round = res['test-merror-mean'].argmin()
-
+            #res = xgb.cv(param, dtrain=train_dmatrix, seed=i, num_boost_round=500, 
+            #        nfold=args.cv, early_stopping_rounds=30, maximize=False, verbose_eval=True)
+            #num_boost_round = res['test-merror-mean'].argmin()
+            num_boost_round = 210
             logger.info('Train xgboost tree with seed {}, depth {}, num_boost_round {}'.format(i, args.depth, num_boost_round))
             
             clf = xgb.train(param, dtrain=train_dmatrix, num_boost_round=num_boost_round, maximize=False)

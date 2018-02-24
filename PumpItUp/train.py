@@ -62,10 +62,10 @@ def main(args):
             logger.info('Cross validate with seed {}, depth {}, {}-fold'.format(i, args.depth, args.cv))
             
             param['seed'] = i
-            #res = xgb.cv(param, dtrain=train_dmatrix, seed=i, num_boost_round=500, 
-            #        nfold=args.cv, early_stopping_rounds=30, maximize=False, verbose_eval=True)
+            num_boost_round = 1000
+            res = xgb.cv(param, dtrain=train_dmatrix, seed=i, num_boost_round=num_boost_round, 
+                    nfold=args.cv, maximize=False, verbose_eval=True)
             #num_boost_round = res['test-merror-mean'].argmin()
-            num_boost_round = 210
             logger.info('Train xgboost tree with seed {}, depth {}, num_boost_round {}'.format(i, args.depth, num_boost_round))
             
             clf = xgb.train(param, dtrain=train_dmatrix, num_boost_round=num_boost_round, maximize=False)
